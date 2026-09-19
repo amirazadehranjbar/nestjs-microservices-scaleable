@@ -1,114 +1,207 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# nestjs-microservices-scaleable — Build Log
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> Running, step-by-step record of everything done on this project, in order. Updated as we go.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📋 Steps Index
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| # | Step | Purpose | Status |
+|---|---|---|---|
+| 1 | [Create the Nest App (Monorepo Mode)](#step-1--create-the-nest-app-monorepo-mode) | Lay the foundation as a monorepo so shared code can live in `libs/` and be reused by future services | ✅ Done |
+| 2 | [Generate the `common` Library](#step-2--generate-the-common-library) | Create the shared-code home (`@app/common`) that every future module/service will import from | ✅ Done |
+| 3 | [Config Module + Database Module (Mongoose + Joi)](#step-3--config-module--database-module-mongoose--joi) | Validate required env vars and connect the app to MongoDB | ⚠️ Done, wiring gap open |
 
-## Project setup
+---
 
-```bash
-$ npm install
+## Big Picture — Monorepo Structure
+
+```mermaid
+flowchart TD
+    subgraph Repo["nestjs-microservices-scaleable (Nest monorepo)"]
+        App[apps/ or src/ — main application]
+        Lib[libs/common — shared library]
+        App -->|imports via path alias| Lib
+    end
+    Lib --> Shared[Shared: decorators, guards, filters, DTOs, utils...]
 ```
 
-## Compile and run the project
+**Why monorepo mode:** a `libs/` folder means this isn't a single Nest app — it's set up so multiple services (or one app + shared code) live in one repo and reuse the same compiled TypeScript path aliases, instead of publishing an npm package for shared code.
+
+---
+---
+
+# 🟦 STEP 1 — Create the Nest App (Monorepo Mode)
+
+🎯 **Purpose:** start the project in **monorepo mode** (not a single-app mode) so that from day one there's a `libs/` folder for shared code — the base this whole "scalable microservices" setup depends on.
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+nest new nestjs-microservices-scaleable
 ```
 
-## Run tests
+**What this generated:**
+- `src/` — the main application (`main.ts`, `app.module.ts`, `app.controller.ts`, `app.service.ts`)
+- `nest-cli.json` — the monorepo config file, currently:
+
+```json
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": { "deleteOutDir": true, "builder": "rspack" }
+}
+```
+
+📌 **Notable non-default choices already in `package.json`:**
+
+| Choice | What you have | Default Nest starter uses |
+|---|---|---|
+| Bundler | `rspack` (`@rspack/core`) | webpack |
+| Test runner | `vitest` | jest |
+| Linter | `oxlint` | eslint |
+| Module system | `"type": "module"` (ESM) | CommonJS |
+| Config validation | `joi` | (none by default) |
+| Nest version | `^12.0.1` | — |
+
+---
+---
+
+# 🟦 STEP 2 — Generate the `common` Library
+
+🎯 **Purpose:** create one shared package (`@app/common`) that any future app or microservice in this repo can import from — decorators, guards, DTOs, the config/database modules from Step 3 — instead of copy-pasting shared code into each service or publishing an internal npm package.
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+nest g library common
 ```
 
-## Deployment
+**What this changed:**
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```
+libs/
+└── common/
+    ├── src/
+    │   └── index.ts          # barrel file — re-export everything shared from here
+    └── tsconfig.lib.json
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+`nest-cli.json` gained a `projects` entry:
 
-## Observability
+```json
+"projects": {
+  "common": {
+    "type": "library",
+    "root": "libs/common",
+    "entryFile": "index",
+    "sourceRoot": "libs/common/src",
+    "compilerOptions": { "tsConfigPath": "libs/common/tsconfig.lib.json" }
+  }
+}
+```
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+**Why a library instead of a plain shared folder:** `nest g library` wires up a TypeScript path alias (e.g. `@app/common`) automatically, so any future app/service in this monorepo can `import { X } from '@app/common'` instead of a relative `../../../libs/common/...` path — this is what makes it scale to multiple microservices later.
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+---
+---
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+# 🟦 STEP 3 — Config Module + Database Module (Mongoose + Joi)
 
-## Resources
+🎯 **Purpose:** two separate concerns, both required before any real feature module can exist —
+1. **Config Module:** make sure the app refuses to boot if a required env var (`MONGODB_URI`) is missing, instead of crashing later with a confusing runtime error.
+2. **Database Module:** actually open the MongoDB connection via Mongoose, driven by that validated config, so feature modules (users, products, etc.) can start using `@InjectModel()`.
 
-Check out a few resources that may come in handy when working with NestJS:
+```mermaid
+flowchart TD
+    ENV[.env — MONGODB_URI] --> CFG["@nestjs/config ConfigModule.forRoot({isGlobal:true})"]
+    CFG --> CS[ConfigService]
+    CS -->|configService.getOrThrow'MONGODB_URI'| MG["MongooseModule.forRootAsync"]
+    MG --> DB[(MongoDB)]
+    AppModule --> DatabaseModule
+    DatabaseModule --> CFG
+    DatabaseModule --> MG
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**Files added, both inside `libs/common/src/`:**
 
-## Support
+```
+libs/common/src/
+├── config/
+│   └── config.module.ts      → nest g module config --project common   (or hand-written, as here)
+└── database/
+    └── database.module.ts    → nest g module database --project common
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### 3.1 — `config/config.module.ts`
 
-## Stay in touch
+```typescript
+import { Module } from '@nestjs/common';
+import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import Joi from 'joi';
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+@Module({
+  imports: [
+    NestConfigModule.forRoot({
+      // WHY: fail fast at boot if MONGODB_URI is missing, instead of
+      // getting a confusing Mongoose connection error later
+      validationSchema: Joi.object({
+        MONGODB_URI: Joi.string().required(),
+      }),
+    }),
+  ],
+})
+export class ConfigModule {}
+```
 
-## License
+### 3.2 — `database/database.module.ts`
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```typescript
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      // WHY forRootAsync instead of forRoot: the URI comes from ConfigService,
+      // which isn't ready at module-definition time — async factory waits for it
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.getOrThrow<string>('MONGODB_URI'),
+      }),
+    }),
+  ],
+})
+export class DatabaseModule {}
+```
+
+### 3.3 — Wired into the app
+
+```typescript
+// src/app.module.ts
+import { DatabaseModule } from '@app/common/database/database.module.js';
+
+@Module({
+  imports: [
+    // ...ObserveModule...
+    DatabaseModule,
+  ],
+})
+```
+
+📦 **Packages used here (already in `package.json`, none new):** `@nestjs/config`, `@nestjs/mongoose`, `mongoose`, `joi`.
+
+| File | Usage |
+|---|---|
+| `config/config.module.ts` | A `ConfigModule` that validates `.env` against a Joi schema before the app boots — currently only checks `MONGODB_URI` exists. |
+| `database/database.module.ts` | Opens the actual Mongoose/MongoDB connection using `MONGODB_URI` pulled from `ConfigService`. |
+
+> ⚠️ **Open issue — flagging, not changed:**
+> `database.module.ts` calls `@nestjs/config`'s `ConfigModule.forRoot()` directly — it does **not** import your custom `config/config.module.ts`. So:
+> - The Joi validation schema in `ConfigModule` isn't actually running anywhere yet.
+> - `libs/common/src/index.ts` (the barrel) is still empty — `app.module.ts` reaches into the deep path `@app/common/database/database.module.js` instead of a clean `@app/common` import.
+
+---
+---
+
+*(Step 4 goes here — tell me what's next)*
