@@ -1,6 +1,6 @@
 # nestjs-microservices-scaleable — Build Log
 
-> Running, step-by-step record of everything done on this project, in order. Updated as we go.
+> Running, step-by-step record of everything done on this project, in order. Updated as i go.
 
 ---
 
@@ -119,15 +119,25 @@ flowchart TD
     DatabaseModule --> MG
 ```
 
-**Files added, both inside `libs/common/src/`:**
+**Files added, both inside `libs/common/src/`, plus a root `.env`:**
 
 ```
-libs/common/src/
-├── config/
-│   └── config.module.ts      → nest g module config --project common   (or hand-written, as here)
-└── database/
-    └── database.module.ts    → nest g module database --project common
+nestjs-microservices-scaleable/
+├── .env                       # already existed before this step — holds MONGODB_URI
+└── libs/common/src/
+    ├── config/
+    │   └── config.module.ts      → nest g module config --project common   (or hand-written, as here)
+    └── database/
+        └── database.module.ts    → nest g module database --project common
 ```
+
+### 3.0 — `.env` (root of the project)
+
+```env
+MONGODB_URI=mongodb://127.0.0.1/nest-microservies-scaleable
+```
+
+This is what `configService.getOrThrow('MONGODB_URI')` actually reads at runtime — without this file (or the var set another way), `ConfigModule.forRoot()`'s Joi check would fail the app at boot, and `DatabaseModule` would throw on `getOrThrow`.
 
 ### 3.1 — `config/config.module.ts`
 
@@ -189,7 +199,7 @@ import { DatabaseModule } from '@app/common/database/database.module.js';
 })
 ```
 
-📦 **Packages used here (already in `package.json`, none new):** `@nestjs/config`, `@nestjs/mongoose`, `mongoose`, `joi`.
+📦 **Packages used here — checked against `package.json` AND `node_modules`, all already installed, none new:** `@nestjs/config` (`^12.0.0`), `@nestjs/mongoose` (`^12.0.0`), `mongoose` (`^9.10.1`), `joi` (`^18.2.9`).
 
 | File | Usage |
 |---|---|
@@ -204,4 +214,4 @@ import { DatabaseModule } from '@app/common/database/database.module.js';
 ---
 ---
 
-*(Step 4 goes here — tell me what's next)*
+*(Step 4 goes here)*
