@@ -29,5 +29,11 @@
         "./libs/common/src/*"
       ]
     }
-  }
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/reservations/tsconfig.app.json"
+    }
+  ]
 }
